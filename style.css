@@ -101,4 +101,35 @@ li.completed {
 .delete-btn:hover {
     background-color: #c0392b;
 }
+/* Estructura base para ordenadores */
+.contenedor-app {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: flex-start;
+  flex-wrap: wrap; /* Permite que los elementos bajen si no caben */
+  gap: 20px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Regla mágica obligatoria para teléfonos móviles */
+@media (max-width: 768px) {
+  .contenedor-app {
+    flex-direction: column; /* Cambia la dirección a vertical */
+    align-items: center;    /* Centra los bloques en la pantalla */
+    padding: 10px;
+  }
+
+  /* Forzamos a que cada bloque o sección ocupe casi todo el ancho del móvil */
+  .contenedor-app > div, 
+  .contenedor-app > section,
+  .contenedor-app > main {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+  }
+}
 
