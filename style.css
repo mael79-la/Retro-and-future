@@ -75,7 +75,26 @@ li.completed {
 
 .delete-btn {
     background-color: #e74c3c;
-    padding: 5px 10px;
+    padding: 5px 10px;/* Esto arregla el diseño en teléfonos móviles */
+@media (max-width: 600px) {
+  /* Si usas un contenedor principal Flexbox o Grid, lo ordenamos en columna */
+  body, .contenedor-principal, main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    gap: 20px;
+  }
+
+  /* Ajustamos las cajas para que ocupen todo el ancho disponible */
+  .formulario-despensa, .card, div {
+    width: 95% !important;
+    max-width: 100% !important;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+}
+
     font-size: 12px;
 }
 
