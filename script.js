@@ -63,7 +63,6 @@ itemsRef.on('value', snapshot => {
         <button class="btn-qty" onclick="cambiarCantidad('${child.key}', -1)">−</button>
         <span class="item-cantidad">${cantidad || 1}</span>
         <button class="btn-qty" onclick="cambiarCantidad('${child.key}', 1)">+</button>
-        <button class="btn-borrar" onclick="borrarItem('${child.key}')">✕</button>
       </div>
     `;
     itemList.appendChild(li);
