@@ -160,3 +160,28 @@ h1 {
     gap: 5px;
   }
 }
+/* Contenedor del título y el logo */
+.encabezado-app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px; /* Espacio entre el logo y el texto */
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Estilos para tu logo.png */
+.logo-app {
+  width: 50px;        /* Tamaño ideal para pantallas de móvil y PC */
+  height: 50px;       /* Mantiene el logo cuadrado */
+  object-fit: contain;/* Evita que la imagen se estire o se deforme */
+  border-radius: 8px; /* Opcional: le da esquinas suaves al logo */
+}
+
+/* Ajuste para que en móviles pequeños se organice bien */
+@media (max-width: 480px) {
+  .encabezado-app {
+    flex-direction: column; /* Pone el logo arriba y el título abajo en móviles */
+    gap: 5px;
+  }
+}
