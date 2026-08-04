@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Despensa</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;padding:1.5rem}
+    .container{max-width:480px;margin:0 auto}
+    h1{font-size:1.8rem;margin-bottom:1.2rem}
+    .input-section{display:flex;gap:.5rem;margin-bottom:1.5rem}
+    .input-section input{flex:1;padding:.75rem 1rem;border:2px solid #ddd;border-radius:8px;font-size:1rem;outline:none}
+    .input-section input:focus{border-color:#4CAF50}
+    .input-section button{padding:.75rem 1.2rem;background:#4CAF50;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer}
+    #itemList{list-style:none;display:flex;flex-direction:column;gap:.6rem}
+    #itemList li{background:white;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .item-img{width:2.8rem;height:2.8rem;border-radius:8px;cursor:pointer;flex-shrink:0;font-size:1.8rem;display:flex;align-items:center;justify-content:center;background:#f0f0f0;border:2px dashed #ddd;overflow:hidden}
+    .item-img img{width:100%;height:100%;object-fit:cover}
+    .item-nombre{font-size:1rem;font-weight:500;flex:1}
+    .item-controles{display:flex;align-items:center;gap:.4rem;flex-shrink:0}
+    .btn-qty{width:2rem;height:2rem;border:2px solid #4CAF50;background:white;color:#4CAF50;border-radius:6px;font-size:1.2rem;font-weight:700;cursor:pointer}
+    .btn-qty:hover{background:#4CAF50;color:white}
+    .item-cantidad{min-width:2rem;text-align:center;font-size:1.1rem;font-weight:700}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal{background:white;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:1.5rem;transform:translateY(100%);transition:transform .3s;max-height:85vh;overflow-y:auto}
+    .modal-overlay.open .modal{transform:translateY(0)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .modal-title{font-size:1.1rem;font-weight:700}
+    .modal-close{background:#f0f0f0;border:none;width:2rem;height:2rem;border-radius:50%;font-size:1rem;cursor:pointer}
+    .upload-btn{width:100%;padding:.75rem;background:#e8f5e9;border:2px dashed #4CAF50;border-radius:10px;color:#2e7d32;font-size:.95rem;font-weight:600;cursor:pointer;margin-bottom:1.2rem;text-align:center;display:block}
+    .gallery-label{font-size:.8rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.7rem}
+    .emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem}
+    .emoji-btn{aspect-ratio:1;font-size:1.8rem;background:#f5f5f5;border:2px solid transparent;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .emoji-btn:hover{background:#e8f5e9;border-color:#4CAF50}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 Mi Despensa</h1>
+    <div class="input-section">
+      <input type="text" id="itemInput" placeholder="Ej. Arroz, Leche, Café...">
+      <button id="addBtn">Agregar</button>
+    </div>
+    <ul id="itemList"></ul>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Elige una imagen</span>
+        <button class="modal-close" onclick="cerrarModal()">✕</button>
+      </div>
+      <label class="upload-btn">
+        📁 Subir foto de tu dispositivo
+        <input type="file" accept="image/*" id="fileInput" style="display:none" onchange="subirFoto(event)">
+      </label>
+      <div class="gallery-label">O elige un icono</div>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey:"AIzaSyCHfQwXlSVgbLw9iuC8iXYshTtBUJum2RU",
+      authDomain:"mi-despenda.firebaseapp.com",
+      databaseURL:"https://mi-despenda-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:"mi-despenda",
+      storageBucket:"mi-despenda.firebasestorage.app",
+      messagingSenderId:"371223706662",
+      appId:"1:371223706662:web:f507e35bb15c676ec67ae7"
+    });
+
+    const db = firebase.database();
+    const itemsRef = db.ref('items');
+    const itemInput = document.getElementById('itemInput');
+    const addBtn = document.getElementById('addBtn');
+    const itemList = document.getElementById('itemList');
+
+    const EMOJIS = ['🍌','🍅','🍎','🍊','🍋','🥕','🥦','🧅','🥔','🍇','🍓','🥑',
+                    '🌽','🧄','🥒','🍆','🫑','🍞','🥛','🧀','🥚','🍗','🥩','🐟',
+                    '🍚','🫘','☕','🍵','🧃','🍫','🥜','🫙','🥗','🍕','🧇','🥐',
+                    '🧈','🍯','🫒','🍄','🌶️','🧆'];
+
+    const grid = document.getElementById('emojiGrid');
+    EMOJIS.forEach(e => {
+      const b = document.createElement('button');
+      b.className = 'emoji-btn';
+      b.textContent = e;
+      b.onclick = () => guardarImagen(e, false);
+      grid.appendChild(b);
+    });
+
+    let keyActivo = null;
+
+    function abrirModal(key) {
+      keyActivo = key;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+    function cerrarModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+      keyActivo = null;
+    }
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modalOverlay')) cerrarModal();
+    });
+
+    function subirFoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const max = 150;
+          let w = img.width, h = img.height;
+          if (w > h) { h = (h / w) * max; w = max; }
+          else { w = (w / h) * max; h = max; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          guardarImagen(canvas.toDataURL('image/jpeg', 0.6), true);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function guardarImagen(valor, esBase64) {
+      if (!keyActivo) return;
+      itemsRef.child(keyActivo).update({ imagen: valor, esBase64: esBase64 });
+      cerrarModal();
+    }
+
+    addBtn.addEventListener('click', agregarItem);
+    itemInput.addEventListener('keypress', e => { if (e.key === 'Enter') agregarItem(); });
+
+    function agregarItem() {
+      const texto = itemInput.value.trim();
+      if (!texto) return;
+      itemsRef.push({ nombre: texto, cantidad: 1, imagen: '🛒', esBase64: false });
+      itemInput.value = '';
+      itemInput.focus();
+    }
+
+    function cambiarCantidad(key, delta) {
+      itemsRef.child(key).once('value', snap => {
+        const actual = snap.val().cantidad || 1;
+        const nueva = Math.max(0, actual + delta);
+        if (nueva === 0) {
+          if (confirm('¿Borrar este producto?')) itemsRef.child(key).remove();
+        } else {
+          itemsRef.child(key).update({ cantidad: nueva });
+        }
+      });
+    }
+
+    // ── Renderizado con createElement (evita bugs de innerHTML con base64) ──
+    itemsRef.on('value', snapshot => {
+      itemList.innerHTML = '';
+      snapshot.forEach(child => {
+        const data = child.val();
+        const li = document.createElement('li');
+
+        // Imagen / emoji
+        const imgDiv = document.createElement('div');
+        imgDiv.className = 'item-img';
+        imgDiv.onclick = () => abrirModal(child.key);
+
+        if (data.esBase64 && data.imagen) {
+          const img = document.createElement('img');
+          img.src = data.imagen;
+          img.alt = data.nombre;
+          imgDiv.appendChild(img);
+        } else {
+          imgDiv.textContent = data.imagen || '🛒';
+        }
+
+        // Nombre
+        const nombre = document.createElement('span');
+        nombre.className = 'item-nombre';
+        nombre.textContent = data.nombre;
+
+        // Controles
+        const controles = document.createElement('div');
+        controles.className = 'item-controles';
+
+        const btnMenos = document.createElement('button');
+        btnMenos.className = 'btn-qty';
+        btnMenos.textContent = '−';
+        btnMenos.onclick = () => cambiarCantidad(child.key, -1);
+
+        const cantidad = document.createElement('span');
+        cantidad.className = 'item-cantidad';
+        cantidad.textContent = data.cantidad || 1;
+
+        const btnMas = document.createElement('button');
+        btnMas.className = 'btn-qty';
+        btnMas.textContent = '+';
+        btnMas.onclick = () => cambiarCantidad(child.key, 1);
+
+        controles.appendChild(btnMenos);
+        controles.appendChild(cantidad);
+        controles.appendChild(btnMas);
+
+        li.appendChild(imgDiv);
+        li.appendChild(nombre);
+        li.appendChild(controles);
+        itemList.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>
