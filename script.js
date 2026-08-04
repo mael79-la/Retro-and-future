@@ -68,3 +68,42 @@ itemsRef.on('value', snapshot => {
     itemList.appendChild(li);
   });
 });
+// 1. Elementos del HTML
+const botonAgregar = document.getElementById('btn-agregar');
+const inputProducto = document.getElementById('nombre-producto');
+const contenedorNotificaciones = document.getElementById('contenedor-notificaciones');
+
+// Supongamos que tienes guardado el estado de tu botón jeringuilla en una variable
+// o simplemente quieres validar una condición
+let jeringuillaActivada = false; 
+
+// 2. Función mágica para crear y mostrar la notificación en pantalla
+function enviarNotificacion(mensaje) {
+  const alerta = document.createElement('div');
+  alerta.classList.add('notificacion');
+  alerta.innerHTML = `<span>⚠️</span> <span>${mensaje}</span>`;
+  
+  contenedorNotificaciones.appendChild(alerta);
+  
+  // Desaparece sola a los 4 segundos
+  setTimeout(() => {
+    alerta.classList.add('ocultar');
+    alerta.addEventListener('animationend', () => {
+      alerta.remove();
+    });
+  }, 4000);
+}
+
+// 3. Escuchar el clic en el botón verde "Agregar"
+botonAgregar.addEventListener('click', () => {
+  const textoProducto = inputProducto.value.trim();
+
+  if (textoProducto === "") return; // Si está vacío no hace nada
+
+  // CONDICIÓN: Si la jeringuilla no está activa, envía tu alerta personalizada
+  if (!jeringuillaActivada) {
+    enviarNotificacion("Hola usuario, se te ha olvidado la jeringuilla 💉");
+  }
+
+  // Aquí continuaría tu código normal para meter el producto en la lista...
+});
