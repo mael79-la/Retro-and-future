@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Despensa</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4CAF50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mi Despensa">
+  <link rel="apple-touch-icon" href="logo.png">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#222;padding-bottom:70px}
+    
+    /* INSTALL BANNER */
+    #installBanner{display:flex;gap:.5rem;padding:.8rem 1rem;background:#1b5e20;position:sticky;top:0;z-index:50}
+    .install-btn{flex:1;padding:.6rem;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem}
+    #btnAndroid{background:#4CAF50;color:white}
+    #btnIOS{background:white;color:#1b5e20}
+    #installBanner.hidden{display:none}
+
+    /* iOS MODAL */
+    .ios-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+    .ios-overlay.open{opacity:1;pointer-events:all}
+    .ios-box{background:white;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:1.5rem}
+    .ios-box h3{font-size:1.1rem;margin-bottom:1rem}
+    .ios-step{display:flex;align-items:center;gap:.8rem;padding:.7rem 0;border-bottom:1px solid #f0f0f0;font-size:.9rem}
+    .ios-step:last-child{border:none}
+    .ios-icon{font-size:1.5rem;width:2rem;text-align:center}
+    .ios-close{width:100%;margin-top:1rem;padding:.75rem;background:#4CAF50;color:white;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+
+    /* TABS */
+    .container{max-width:480px;margin:0 auto;padding:1rem 1rem 0}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+
+    /* BOTTOM NAV */
+    #bottomNav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #e0e0e0;display:flex;z-index:50;max-width:100%}
+    .nav-btn{flex:1;padding:.7rem .5rem .5rem;border:none;background:none;cursor:pointer;font-size:.7rem;font-weight:600;color:#888;display:flex;flex-direction:column;align-items:center;gap:.2rem;transition:color .2s}
+    .nav-btn .nav-icon{font-size:1.4rem}
+    .nav-btn.active{color:#4CAF50}
+
+    /* DESPENSA */
+    h1{font-size:1.6rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .input-section{display:flex;gap:.5rem;margin-bottom:1rem}
+    .input-section input{flex:1;padding:.75rem 1rem;border:2px solid #ddd;border-radius:8px;font-size:1rem;outline:none}
+    .input-section input:focus{border-color:#4CAF50}
+    .input-section button{padding:.75rem 1.2rem;background:#4CAF50;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer}
+    #itemList{list-style:none;display:flex;flex-direction:column;gap:.5rem}
+    #itemList li{background:white;border-radius:10px;padding:.7rem .8rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .item-img{width:2.8rem;height:2.8rem;border-radius:8px;cursor:pointer;flex-shrink:0;font-size:1.8rem;display:flex;align-items:center;justify-content:center;background:#f0f0f0;border:2px dashed #ddd;overflow:hidden}
+    .item-img img{width:100%;height:100%;object-fit:cover}
+    .item-nombre{font-size:.95rem;font-weight:500;flex:1}
+    .item-controles{display:flex;align-items:center;gap:.3rem;flex-shrink:0}
+    .btn-qty{width:2rem;height:2rem;border:2px solid #4CAF50;background:white;color:#4CAF50;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer}
+    .btn-qty:hover{background:#4CAF50;color:white}
+    .item-cantidad{min-width:1.8rem;text-align:center;font-size:1rem;font-weight:700}
+
+    /* CATÁLOGO */
+    .cat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .cat-search{width:100%;padding:.65rem 1rem;border:2px solid #ddd;border-radius:8px;font-size:.95rem;outline:none;margin-bottom:1rem}
+    .cat-search:focus{border-color:#4CAF50}
+    .cat-section{margin-bottom:1rem}
+    .cat-section-title{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:.5rem;padding:.3rem .5rem;background:#e8f5e9;border-radius:6px}
+    .cat-item{background:white;border-radius:10px;padding:.7rem .9rem;display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+    .cat-emoji{font-size:1.6rem;width:2rem;text-align:center;flex-shrink:0}
+    .cat-info{flex:1}
+    .cat-nombre{font-size:.9rem;font-weight:500}
+    .cat-precio-wrap{display:flex;align-items:center;gap:.3rem;margin-top:.2rem}
+    .cat-precio{width:5rem;padding:.25rem .4rem;border:1px solid #ddd;border-radius:6px;font-size:.85rem;outline:none;text-align:right}
+    .cat-precio:focus{border-color:#4CAF50}
+    .cat-eur{font-size:.8rem;color:#888}
+    .cat-add{padding:.4rem .7rem;background:#4CAF50;color:white;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+    /* RECORDATORIOS */
+    .rec-section{background:white;border-radius:12px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .rec-title{font-size:1rem;font-weight:700;margin-bottom:.8rem}
+    .rec-desc{font-size:.85rem;color:#666;margin-bottom:1rem;line-height:1.5}
+    .btn-notif{width:100%;padding:.8rem;background:#4CAF50;color:white;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:.8rem}
+    .btn-notif.off{background:#e0e0e0;color:#888}
+    .time-wrap{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem}
+    .time-wrap label{font-size:.85rem;font-weight:600;color:#555}
+    .time-input{padding:.5rem .8rem;border:2px solid #ddd;border-radius:8px;font-size:1rem;outline:none}
+    .time-input:focus{border-color:#4CAF50}
+    .btn-save-reminder{padding:.6rem 1.2rem;background:#4CAF50;color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer}
+    .reminder-list{display:flex;flex-direction:column;gap:.5rem}
+    .reminder-item{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;background:#f5f5f5;border-radius:8px}
+    .reminder-time{font-weight:700;font-size:.95rem}
+    .btn-del-reminder{background:none;border:none;color:#e53935;font-size:1rem;cursor:pointer}
+    .notif-status{font-size:.8rem;padding:.4rem .8rem;border-radius:20px;display:inline-block;margin-bottom:.8rem}
+    .notif-status.ok{background:#e8f5e9;color:#2e7d32}
+    .notif-status.no{background:#fce4ec;color:#c62828}
+
+    /* MODAL IMAGEN */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal{background:white;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:1.5rem;transform:translateY(100%);transition:transform .3s;max-height:85vh;overflow-y:auto}
+    .modal-overlay.open .modal{transform:translateY(0)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .modal-title{font-size:1.1rem;font-weight:700}
+    .modal-close{background:#f0f0f0;border:none;width:2rem;height:2rem;border-radius:50%;font-size:1rem;cursor:pointer}
+    .upload-btn{width:100%;padding:.75rem;background:#e8f5e9;border:2px dashed #4CAF50;border-radius:10px;color:#2e7d32;font-size:.95rem;font-weight:600;cursor:pointer;margin-bottom:1.2rem;text-align:center;display:block}
+    .gallery-label{font-size:.8rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.7rem}
+    .emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem}
+    .emoji-btn{aspect-ratio:1;font-size:1.8rem;background:#f5f5f5;border:2px solid transparent;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .emoji-btn:hover{background:#e8f5e9;border-color:#4CAF50}
+  </style>
+</head>
+<body>
+
+<!-- BANNER INSTALAR -->
+<div id="installBanner">
+  <button class="install-btn" id="btnAndroid">⬇️ Instalar en Android</button>
+  <button class="install-btn" id="btnIOS">⬇️ Instalar en iOS</button>
+</div>
+
+<!-- MODAL iOS -->
+<div class="ios-overlay" id="iosOverlay">
+  <div class="ios-box">
+    <h3>📱 Instalar en iPhone / iPad</h3>
+    <div class="ios-step"><span class="ios-icon">1️⃣</span><span>Abre esta página en <strong>Safari</strong></span></div>
+    <div class="ios-step"><span class="ios-icon">📤</span><span>Toca el botón de <strong>Compartir</strong> (cuadro con flecha)</span></div>
+    <div class="ios-step"><span class="ios-icon">➕</span><span>Toca <strong>"Añadir a pantalla de inicio"</strong></span></div>
+    <div class="ios-step"><span class="ios-icon">✅</span><span>Toca <strong>"Añadir"</strong> — ¡lista la app!</span></div>
+    <button class="ios-close" onclick="cerrarIOS()">Entendido</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="container">
+
+  <!-- ── DESPENSA ── -->
+  <div id="tab-despensa" class="tab-content active">
+    <h1>🛒 Mi Despensa</h1>
+    <div class="input-section">
+      <input type="text" id="itemInput" placeholder="Ej. Arroz, Leche, Café...">
+      <button id="addBtn">Agregar</button>
+    </div>
+    <ul id="itemList"></ul>
+  </div>
+
+  <!-- ── CATÁLOGO ── -->
+  <div id="tab-catalogo" class="tab-content">
+    <div class="cat-header">
+      <h1>📋 Catálogo</h1>
+    </div>
+    <input class="cat-search" id="catSearch" placeholder="🔍 Buscar producto..." oninput="filtrarCatalogo()">
+    <div id="catalogoContainer"></div>
+  </div>
+
+  <!-- ── RECORDATORIOS ── -->
+  <div id="tab-recordatorios" class="tab-content">
+    <h1>🔔 Avisos</h1>
+
+    <div class="rec-section">
+      <div class="rec-title">Notificaciones del navegador</div>
+      <div class="rec-desc">Activa los avisos para recibir recordatorios de compra aunque tengas la app en segundo plano.</div>
+      <div id="notifStatus" class="notif-status no">❌ Sin activar</div>
+      <button class="btn-notif" id="btnNotif" onclick="activarNotificaciones()">Activar notificaciones</button>
+    </div>
+
+    <div class="rec-section">
+      <div class="rec-title">Añadir recordatorio diario</div>
+      <div class="time-wrap">
+        <label>Hora:</label>
+        <input type="time" id="timeInput" class="time-input" value="09:00">
+        <button class="btn-save-reminder" onclick="agregarRecordatorio()">+ Añadir</button>
+      </div>
+      <div class="reminder-list" id="reminderList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav id="bottomNav">
+  <button class="nav-btn active" onclick="showTab('despensa',this)">
+    <span class="nav-icon">🛒</span>Despensa
+  </button>
+  <button class="nav-btn" onclick="showTab('catalogo',this)">
+    <span class="nav-icon">📋</span>Catálogo
+  </button>
+  <button class="nav-btn" onclick="showTab('recordatorios',this)">
+    <span class="nav-icon">🔔</span>Avisos
+  </button>
+</nav>
+
+<!-- MODAL IMAGEN -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Elige una imagen</span>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <label class="upload-btn">
+      📁 Subir foto de tu dispositivo
+      <input type="file" accept="image/*" id="fileInput" style="display:none" onchange="subirFoto(event)">
+    </label>
+    <div class="gallery-label">O elige un icono</div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+/* ── FIREBASE ── */
+firebase.initializeApp({
+  apiKey:"AIzaSyCHfQwXlSVgbLw9iuC8iXYshTtBUJum2RU",
+  authDomain:"mi-despenda.firebaseapp.com",
+  databaseURL:"https://mi-despenda-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"mi-despenda",
+  storageBucket:"mi-despenda.firebasestorage.app",
+  messagingSenderId:"371223706662",
+  appId:"1:371223706662:web:f507e35bb15c676ec67ae7"
+});
+const db = firebase.database();
+const itemsRef = db.ref('items');
+const preciosRef = db.ref('precios');
+
+/* ── SERVICE WORKER ── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+/* ── TABS ── */
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+/* ── INSTALAR PWA ── */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+document.getElementById('btnAndroid').onclick = async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('installBanner').classList.add('hidden');
+    deferredPrompt = null;
+  } else {
+    alert('Para instalar: menú del navegador (⋮) → "Añadir a pantalla de inicio" o "Instalar app"');
+  }
+};
+
+document.getElementById('btnIOS').onclick = () => {
+  document.getElementById('iosOverlay').classList.add('open');
+};
+function cerrarIOS() {
+  document.getElementById('iosOverlay').classList.remove('open');
+}
+
+// Ocultar banner si ya está instalada
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  document.getElementById('installBanner').classList.add('hidden');
+}
+
+/* ══════════════════════════
+   DESPENSA
+══════════════════════════ */
+const EMOJIS = ['🍌','🍅','🍎','🍊','🍋','🥕','🥦','🧅','🥔','🍇','🍓','🥑',
+                '🌽','🧄','🥒','🍆','🫑','🍞','🥛','🧀','🥚','🍗','🥩','🐟',
+                '🍚','🫘','☕','🍵','🧃','🍫','🥜','🫙','🥗','🍕','🧇','🥐',
+                '🧈','🍯','🫒','🍄','🌶️','🧆'];
+
+const grid = document.getElementById('emojiGrid');
+EMOJIS.forEach(e => {
+  const b = document.createElement('button');
+  b.className = 'emoji-btn'; b.textContent = e;
+  b.onclick = () => guardarImagen(e, false);
+  grid.appendChild(b);
+});
+
+let keyActivo = null;
+function abrirModal(key) { keyActivo = key; document.getElementById('modalOverlay').classList.add('open'); }
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('open'); keyActivo = null; }
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) cerrarModal();
+});
+
+function subirFoto(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 150; let w = img.width, h = img.height;
+      if (w > h) { h = (h/w)*max; w = max; } else { w = (w/h)*max; h = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      guardarImagen(canvas.toDataURL('image/jpeg',0.6), true);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function guardarImagen(valor, esBase64) {
+  if (!keyActivo) return;
+  itemsRef.child(keyActivo).update({ imagen: valor, esBase64 });
+  cerrarModal();
+}
+
+document.getElementById('addBtn').addEventListener('click', agregarItem);
+document.getElementById('itemInput').addEventListener('keypress', e => { if(e.key==='Enter') agregarItem(); });
+
+function agregarItem() {
+  const texto = document.getElementById('itemInput').value.trim();
+  if (!texto) return;
+  itemsRef.push({ nombre: texto, cantidad: 1, imagen: '🛒', esBase64: false });
+  document.getElementById('itemInput').value = '';
+  document.getElementById('itemInput').focus();
+}
+
+function cambiarCantidad(key, delta) {
+  itemsRef.child(key).once('value', snap => {
+    const actual = snap.val().cantidad || 1;
+    const nueva = Math.max(0, actual + delta);
+    if (nueva === 0) { if (confirm('¿Borrar este producto?')) itemsRef.child(key).remove(); }
+    else itemsRef.child(key).update({ cantidad: nueva });
+  });
+}
+
+itemsRef.on('value', snapshot => {
+  const itemList = document.getElementById('itemList');
+  itemList.innerHTML = '';
+  snapshot.forEach(child => {
+    const data = child.val();
+    const li = document.createElement('li');
+    const imgDiv = document.createElement('div');
+    imgDiv.className = 'item-img';
+    imgDiv.onclick = () => abrirModal(child.key);
+    if (data.esBase64 && data.imagen) {
+      const img = document.createElement('img'); img.src = data.imagen; img.alt = data.nombre;
+      imgDiv.appendChild(img);
+    } else { imgDiv.textContent = data.imagen || '🛒'; }
+    const nombre = document.createElement('span');
+    nombre.className = 'item-nombre'; nombre.textContent = data.nombre;
+    const controles = document.createElement('div'); controles.className = 'item-controles';
+    const bMenos = document.createElement('button'); bMenos.className = 'btn-qty'; bMenos.textContent = '−';
+    bMenos.onclick = () => cambiarCantidad(child.key, -1);
+    const cant = document.createElement('span'); cant.className = 'item-cantidad'; cant.textContent = data.cantidad || 1;
+    const bMas = document.createElement('button'); bMas.className = 'btn-qty'; bMas.textContent = '+';
+    bMas.onclick = () => cambiarCantidad(child.key, 1);
+    controles.append(bMenos, cant, bMas);
+    li.append(imgDiv, nombre, controles);
+    itemList.appendChild(li);
+  });
+});
+
+/* ══════════════════════════
+   CATÁLOGO
+══════════════════════════ */
+const CATALOGO = [
+  { cat:'🍎 Frutas y verduras', items:[
+    {id:'platano',e:'🍌',n:'Plátanos (kg)'},{id:'tomate',e:'🍅',n:'Tomates (kg)'},
+    {id:'patata',e:'🥔',n:'Patatas (kg)'},{id:'cebolla',e:'🧅',n:'Cebollas (kg)'},
+    {id:'zanahoria',e:'🥕',n:'Zanahorias (kg)'},{id:'brocoli',e:'🥦',n:'Brócoli'},
+    {id:'manzana',e:'🍎',n:'Manzanas (kg)'},{id:'naranja',e:'🍊',n:'Naranjas (kg)'},
+    {id:'aguacate',e:'🥑',n:'Aguacates (x3)'},{id:'lechuga',e:'🥬',n:'Lechuga'}
+  ]},
+  { cat:'🥛 Lácteos', items:[
+    {id:'leche',e:'🥛',n:'Leche entera 1L'},{id:'yogur',e:'🫙',n:'Yogures (x4)'},
+    {id:'queso-l',e:'🧀',n:'Queso lonchas'},{id:'mantequilla',e:'🧈',n:'Mantequilla'},
+    {id:'huevos',e:'🥚',n:'Huevos (12 u)'}
+  ]},
+  { cat:'🥩 Carnes y pescados', items:[
+    {id:'pollo',e:'🍗',n:'Pollo (kg)'},{id:'ternera',e:'🥩',n:'Ternera (kg)'},
+    {id:'merluza',e:'🐟',n:'Merluza (kg)'},{id:'bacon',e:'🥓',n:'Bacon (paquete)'},
+    {id:'salmon',e:'🐠',n:'Salmón (kg)'}
+  ]},
+  { cat:'🍞 Panadería', items:[
+    {id:'pan-molde',e:'🍞',n:'Pan de molde'},{id:'barra',e:'🥖',n:'Barra de pan'},
+    {id:'croissant',e:'🥐',n:'Croissants (x6)'}
+  ]},
+  { cat:'🥫 Conservas y básicos', items:[
+    {id:'arroz',e:'🍚',n:'Arroz (kg)'},{id:'pasta',e:'🍝',n:'Pasta (500g)'},
+    {id:'lentejas',e:'🫘',n:'Lentejas (kg)'},{id:'tomate-t',e:'🥫',n:'Tomate triturado'},
+    {id:'aceite',e:'🫒',n:'Aceite de oliva 1L'},{id:'sal',e:'🧂',n:'Sal (kg)'}
+  ]},
+  { cat:'☕ Bebidas', items:[
+    {id:'cafe',e:'☕',n:'Café molido 250g'},{id:'zumo',e:'🧃',n:'Zumo naranja 1L'},
+    {id:'agua',e:'💧',n:'Agua (pack 6u)'},{id:'te',e:'🍵',n:'Bolsas de té'}
+  ]},
+  { cat:'🧻 Higiene y limpieza', items:[
+    {id:'papel',e:'🧻',n:'Papel higiénico'},{id:'jabon',e:'🧼',n:'Jabón de manos'},
+    {id:'dentifrico',e:'🪥',n:'Pasta de dientes'},{id:'fregaplatos',e:'🧽',n:'Lavavajillas'}
+  ]}
+];
+
+let preciosGuardados = {};
+
+preciosRef.on('value', snap => {
+  preciosGuardados = snap.val() || {};
+  renderCatalogo();
+});
+
+function renderCatalogo(filtro = '') {
+  const container = document.getElementById('catalogoContainer');
+  container.innerHTML = '';
+  const f = filtro.toLowerCase();
+  CATALOGO.forEach(seccion => {
+    const items = seccion.items.filter(i => !f || i.n.toLowerCase().includes(f));
+    if (!items.length) return;
+    const sec = document.createElement('div'); sec.className = 'cat-section';
+    const titulo = document.createElement('div'); titulo.className = 'cat-section-title'; titulo.textContent = seccion.cat;
+    sec.appendChild(titulo);
+    items.forEach(item => {
+      const div = document.createElement('div'); div.className = 'cat-item';
+      const emoji = document.createElement('div'); emoji.className = 'cat-emoji'; emoji.textContent = item.e;
+      const info = document.createElement('div'); info.className = 'cat-info';
+      const nom = document.createElement('div'); nom.className = 'cat-nombre'; nom.textContent = item.n;
+      const pw = document.createElement('div'); pw.className = 'cat-precio-wrap';
+      const inp = document.createElement('input'); inp.type = 'number'; inp.className = 'cat-precio';
+      inp.placeholder = '0.00'; inp.step = '0.01'; inp.min = '0';
+      inp.value = preciosGuardados[item.id] || '';
+      inp.onchange = () => {
+        const val = parseFloat(inp.value) || null;
+        if (val) preciosRef.child(item.id).set(val);
+        else preciosRef.child(item.id).remove();
+      };
+      const eur = document.createElement('span'); eur.className = 'cat-eur'; eur.textContent = '€';
+      pw.append(inp, eur); info.append(nom, pw);
+      const btn = document.createElement('button'); btn.className = 'cat-add'; btn.textContent = '+ Despensa';
+      btn.onclick = () => {
+        itemsRef.push({ nombre: item.n, cantidad: 1, imagen: item.e, esBase64: false });
+        showTab('despensa', document.querySelector('.nav-btn'));
+        document.querySelector('.nav-btn').classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach((b,i)=>{ if(i===0) b.classList.add('active'); else b.classList.remove('active'); });
+      };
+      div.append(emoji, info, btn); sec.appendChild(div);
+    });
+    container.appendChild(sec);
+  });
+}
+
+function filtrarCatalogo() {
+  renderCatalogo(document.getElementById('catSearch').value);
+}
+
+/* ══════════════════════════
+   NOTIFICACIONES / RECORDATORIOS
+══════════════════════════ */
+let recordatorios = JSON.parse(localStorage.getItem('recordatorios') || '[]');
+
+function actualizarEstadoNotif() {
+  const st = document.getElementById('notifStatus');
+  const btn = document.getElementById('btnNotif');
+  if (Notification.permission === 'granted') {
+    st.className = 'notif-status ok'; st.textContent = '✅ Activadas';
+    btn.textContent = 'Notificaciones activas'; btn.className = 'btn-notif off';
+  } else {
+    st.className = 'notif-status no'; st.textContent = '❌ Sin activar';
+    btn.textContent = 'Activar notificaciones'; btn.className = 'btn-notif';
+  }
+}
+
+async function activarNotificaciones() {
+  if (Notification.permission === 'granted') return;
+  const perm = await Notification.requestPermission();
+  actualizarEstadoNotif();
+  if (perm === 'granted') new Notification('🛒 Mi Despensa', { body: '¡Notificaciones activadas!' });
+}
+
+function renderRecordatorios() {
+  const list = document.getElementById('reminderList');
+  list.innerHTML = '';
+  recordatorios.forEach((r, i) => {
+    const div = document.createElement('div'); div.className = 'reminder-item';
+    const t = document.createElement('span'); t.className = 'reminder-time'; t.textContent = '🔔 ' + r;
+    const btn = document.createElement('button'); btn.className = 'btn-del-reminder'; btn.textContent = '🗑';
+    btn.onclick = () => { recordatorios.splice(i,1); guardarRecordatorios(); renderRecordatorios(); };
+    div.append(t, btn); list.appendChild(div);
+  });
+}
+
+function guardarRecordatorios() {
+  localStorage.setItem('recordatorios', JSON.stringify(recordatorios));
+}
+
+function agregarRecordatorio() {
+  const val = document.getElementById('timeInput').value;
+  if (!val) return;
+  if (!recordatorios.includes(val)) { recordatorios.push(val); guardarRecordatorios(); }
+  renderRecordatorios();
+  if (Notification.permission !== 'granted') activarNotificaciones();
+}
+
+// Comprobar recordatorios cada minuto
+function comprobarRecordatorios() {
+  if (Notification.permission !== 'granted') return;
+  const ahora = new Date();
+  const hhmm = String(ahora.getHours()).padStart(2,'0') + ':' + String(ahora.getMinutes()).padStart(2,'0');
+  const clave = 'notif_' + hhmm + '_' + ahora.toDateString();
+  if (recordatorios.includes(hhmm) && !sessionStorage.getItem(clave)) {
+    sessionStorage.setItem(clave, '1');
+    new Notification('🛒 Mi Despensa', {
+      body: '¡Recuerda revisar tu lista de la compra!',
+      icon: '/logo.png', tag: 'despensa-' + hhmm
+    });
+  }
+}
+
+setInterval(comprobarRecordatorios, 60000);
+
+// Arranque
+actualizarEstadoNotif();
+renderRecordatorios();
+renderCatalogo();
+</script>
+</body>
+</html>
