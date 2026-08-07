@@ -222,7 +222,7 @@ const preciosRef = db.ref('precios');
 
 /* ── SERVICE WORKER ── */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 
 /* ── TABS ── */
@@ -333,8 +333,12 @@ function cambiarCantidad(key, delta) {
 itemsRef.on('value', snapshot => {
   const itemList = document.getElementById('itemList');
   itemList.innerHTML = '';
-  snapshot.forEach(child => {
-    const data = child.val();
+  // Ordenar A-Z por nombre
+  const items = [];
+  snapshot.forEach(child => items.push({ key: child.key, data: child.val() }));
+  items.sort((a, b) => a.data.nombre.localeCompare(b.data.nombre, 'es'));
+  items.forEach(({ key: childKey, data }) => {
+    const child = { key: childKey, val: () => data };
     const li = document.createElement('li');
     const imgDiv = document.createElement('div');
     imgDiv.className = 'item-img';
